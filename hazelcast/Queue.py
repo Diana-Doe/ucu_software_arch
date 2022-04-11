@@ -22,9 +22,11 @@ class Queue():
         )
 
         queue_l = hz_listener.get_queue("queue").blocking()
+        queue_client.clear()
 
         for i in range(100):
             queue_client.add(i)
+            print(queue_l.take())
 
 
 lim_queue = Queue()
