@@ -27,6 +27,15 @@ Facade service randomly chooses one logging service and one message service from
 
 ![image](https://user-images.githubusercontent.com/54356826/171205674-1f31f71f-785b-4ed7-bece-1d7438f756b0.png)
 
-3. Shut down one message service and two logging services
+3. Shut down two logging services
 
-![image](https://user-images.githubusercontent.com/54356826/171205864-0aeed95b-4f5d-4284-a13f-f696941f2f62.png)
+![image](https://user-images.githubusercontent.com/54356826/171226857-09ce152e-36ae-419f-8fb7-a294bfff5af3.png)
+
+
+Health check allows us to deregister services which doesn't respond. For logging service used Check.hhtp (it sends GET requests each 10s, which doesn't work for message service)
+
+Now all post request go to one logging service, and we get no errors. (all GET request are from check)
+
+![image](https://user-images.githubusercontent.com/54356826/171227950-10fb7651-7291-402f-b70d-26d454627e93.png)
+
+
