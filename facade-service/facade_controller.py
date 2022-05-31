@@ -10,6 +10,17 @@ app = Flask(__name__)
 
 port = 5000
 
+
+def health_check(name):
+    index, checks = c.health.checks(name)
+    print(checks)
+
+    for check in checks:
+        if check["Status"] == "critical":
+            c.agent.service.deregister(check["ServiceID"])
+            c.agent.check.deregister(check["CheckID"])
+
+
 @app.errorhandler(404)
 def not_found():
     return make_response(jsonify({'error': 'Not found'}), 404)
@@ -18,8 +29,8 @@ def not_found():
 @app.route('/facade_service', methods=['POST', 'GET'])
 def facade():
     hz_client = hazelcast.HazelcastClient(
-            cluster_members=c.kv.get("hazelcast")[1]["Value"].decode("utf-8").split()
-        )
+        cluster_members=c.kv.get("hazelcast")[1]["Value"].decode("utf-8").split()
+    )
 
     queue_client = hz_client.get_queue(c.kv.get("queue")[1]["Value"].decode("utf-8")).blocking()
 
@@ -28,20 +39,35 @@ def facade():
             abort(400)
         request_data = request.get_json()
         uuid_user = uuid.uuid4()
-        print(["127.0.0.1:" + str(value['Port']) for value in c.agent.services().values() if value["Service"] == 'login-service'])
-        login_rand = random.choice(["http://127.0.0.1:" + str(value['Port'])
-                                    for value in c.agent.services().values() if value["Service"] == 'login-service']) + "/login"
+
+        health_check("login-service")
+        login_rand = ""
+
+        try:
+            login_rand = random.choice(["http://127.0.0.1:" + str(value['Port'])
+                                        for value in c.agent.services().values() if
+                                        value["Service"] == 'login-service']) + "/login"
+        except:
+            return not_found()
+
         response = requests.post(url=login_rand, data=json.dumps({str(uuid_user): str(request_data)}),
                                  headers={'Content-Type': 'application/json'})
         queue_client.add(str(request_data))
         return response.content
 
     elif request.method == 'GET':
-        login_rand = random.choice(["http://127.0.0.1:" + str(value['Port']) for
-                                    value in c.agent.services().values() if value["Service"] == 'login-service']) + "/login"
+        health_check("login-service")
+        login_rand, mes_rand = "", ""
+        try:
+            login_rand = random.choice(["http://127.0.0.1:" + str(value['Port']) for
+                                        value in c.agent.services().values() if
+                                        value["Service"] == 'login-service']) + "/login"
+            mes_rand = random.choice(["http://127.0.0.1:" + str(value['Port'])
+                                  for value in c.agent.services().values() if
+                                  value["Service"] == "message-service"]) + "/messages"
+        except:
+            return not_found()
         response_l = requests.get(url=login_rand).json()
-        mes_rand = random.choice(["http://127.0.0.1:" + str(value['Port'])
-                                  for value in c.agent.services().values() if value["Service"] == "message-service"]) + "/messages"
         response_m = requests.get(url=mes_rand).json()
         return jsonify(response_l, response_m)
     else:

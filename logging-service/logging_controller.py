@@ -43,8 +43,8 @@ class LoginService:
 
 if __name__ == '__main__':
     c = consul.Consul(port=8500)
-    port = 5002
+    port = 5001
     s = LoginService(port)
-    c.agent.service.register(name="login-service", address="127.0.0.1", port=port, service_id=f"login-service:{port}")
+    c.agent.service.register(name="login-service", address="127.0.0.1", port=port, service_id=f"login-service:{port}", check=consul.Check.http(interval="10s", url=f"http://127.0.0.1:{port}/login"))
     s.run()
     s.shut()
